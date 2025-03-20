@@ -19,7 +19,8 @@ import Webcam from 'react-webcam';
 import { motion } from 'framer-motion';
 
 import Layout from '../components/common/Layout';
-import DatabaseContext from '../contexts/DatabaseContext';
+import apiClient from '../services/apiClient';
+// import DatabaseContext from '../contexts/DatabaseContext';
 import UIContext from '../contexts/UIContext';
 import barcodeService from '../services/barcodeService';
 
@@ -30,7 +31,8 @@ import { useZxing, DecodeHintType } from 'react-zxing';
  * Form for creating new products
  */
 const ProductCreate = () => {
-    const { addProduct, findProductByBarcode } = useContext(DatabaseContext);
+    // const { addProduct, findProductByBarcode } = useContext(DatabaseContext);
+
     const { showSnackbar, setLoading } = useContext(UIContext);
     const navigate = useNavigate();
     const location = useLocation();
@@ -63,8 +65,9 @@ const ProductCreate = () => {
                 setIsCameraOpen(false);
 
                 // Check if product already exists
-                const existingProduct = await findProductByBarcode(detectedBarcode);
-                if (existingProduct) {
+                // const existingProduct = await findProductByBarcode(detectedBarcode);
+                const existingProductsList = await apiClient.searchLocalProducts(detectedBarcode);
+                if ((existingProductsList?.length ?? 0) > 0) {
                     showSnackbar(`Product with barcode ${detectedBarcode} already exists`, 'warning');
                 }
 
@@ -81,7 +84,7 @@ const ProductCreate = () => {
                 barcodeService.stopScanning();
             };
         }
-    }, [isCameraOpen, findProductByBarcode, showSnackbar]);
+    }, [isCameraOpen, showSnackbar]);
 
     // Toggle camera for barcode scanning
     const toggleCamera = () => {
@@ -105,9 +108,11 @@ const ProductCreate = () => {
             setLoading(true);
 
             // Check if product already exists
-            const existingProduct = await findProductByBarcode(barcode);
+            // const existingProduct = await findProductByBarcode(barcode);
+            const existingProductsList = await apiClient.searchLocalProducts(barcode);
+            console.log('🚀 ~ handleSubmit ~ existingProductsList:', existingProductsList);
 
-            if (existingProduct) {
+            if ((existingProductsList?.length ?? 0) > 0) {
                 showSnackbar(`Product with barcode ${barcode} already exists`, 'error');
                 return;
             }
@@ -115,17 +120,19 @@ const ProductCreate = () => {
             // Create product object
             const productData = {
                 barcode,
-                name,
+                sku_name: name,
                 price: parseFloat(price) || 0,
-                costPrice: parseFloat(costPrice) || 0,
+                cost_price: parseFloat(costPrice) || 0,
                 quantity: parseInt(quantity) || 0,
                 unit: unit || 'шт',
             };
+            console.log('🚀 ~ handleSubmit ~ productData:', productData);
 
             // Add product to database
-            const productId = await addProduct(productData);
+            // const productId = await addProduct(productData);
+            const productId = await apiClient.addLocalProduct(productData);
 
-            showSnackbar('Product created successfully', 'success');
+            showSnackbar(`Product created successfully ID:${productId}`, 'success');
 
             // Navigate to inventory
             navigate('/inventory');

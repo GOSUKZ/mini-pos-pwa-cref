@@ -141,32 +141,84 @@ class ApiClient {
     return null;
   }
 
-  /**
-   * Add a product to the local sample database
-   * @param {Object} product - Product data
-   */
-  // addLocalProduct(product) {
-  //   if (!product.barcode || !product.sku_name) {
-  //     console.error('Invalid product data');
-  //     return;
-  //   }
+  // * Local product methods (Products operations)
+  async addLocalProduct(product) {
+    console.log("Adding local product:", product);
 
-  //   // Check if product already exists
-  //   const existingProduct = this.sampleProducts.find(p => p.barcode === product.barcode);
+    if (!product.barcode || !product.sku_name) {
+      throw new Error('Product name and barcode are required');
+    }
 
-  //   if (existingProduct) {
-  //     console.warn(`Product with barcode ${product.barcode} already exists`);
-  //     return;
-  //   }
+    // Add timestamps
+    const newProduct = {
+      "barcode": "",
+      "unit": "",
+      "sku_name": "",
+      "status_1c": "",
+      "department": "",
+      "group_name": "",
+      "subgroup": "",
+      "supplier": "",
+      "cost_price": 0,
+      "price": 0,
+      "quantity": 0,
+      ...product
+    };
 
-  //   // Add to sample products
-  //   this.sampleProducts.push({
-  //     barcode: product.barcode,
-  //     sku_name: product.sku_name
-  //   });
 
-  //   console.log('Added product to local database:', product);
-  // }
+    const res = await this.apiRequest('/products/local', {
+      method: 'POST',
+      body: JSON.stringify(newProduct)
+    });
+
+    const id = res.id;
+
+    return id;
+  }
+
+  async updateLocalProduct(id, product) {
+    console.log("Updating local product:", product);
+    const res = await this.apiRequest(`/products/local/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(product)
+    });
+    return !!res;
+  }
+
+  async searchLocalProducts(searchTerm) {
+    console.log("Searching local products:", searchTerm);
+    const res = await this.apiRequest(`/products/local?search=${searchTerm}`, {
+      method: 'GET'
+    });
+    return res?.content || [];
+  }
+
+  async byIdLocalProduct(id) {
+    if (!id) return null;
+    console.log("Getting local product by ID:", id);
+    const res = await this.apiRequest(`/products/local/${id}`, {
+      method: 'GET'
+    });
+    return res;
+  }
+
+  async getAllLocalProducts(sortBy) {
+    console.log("Getting all local products");
+    const res = await this.apiRequest(`/products/local/all${false ? `?sort_by=${sortBy}` : ''}`, {
+      method: 'GET'
+    });
+    return res;
+  }
+
+  async deleteLocalProduct(id) {
+    console.log("Deleting local product:", id);
+    const res = await this.apiRequest(`/products/local/${id}`, {
+      method: 'DELETE'
+    });
+    return !!res;
+  }
+  // *
+
 }
 
 // Create a singleton instance

@@ -238,7 +238,6 @@ class BarcodeService {
 
       // Draw video frame to canvas
       ctx.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
-      console.log('Processing video frame...');
 
       // Get image data
       // const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);

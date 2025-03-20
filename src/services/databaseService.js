@@ -16,7 +16,7 @@ class DatabaseService {
    * Initialize the database and create object stores
    */
   async initDatabase() {
-    
+
     try {
       const db = await openDB(DB_NAME, DB_VERSION, {
         upgrade(db) {
@@ -84,7 +84,7 @@ class DatabaseService {
     // Check if product already exists
     const existingProduct = await db.get('products', { barcode: product.barcode });
     if (existingProduct) {
-      throw new Error('Product with this barcode already exists');
+      throw new Error('Product with this barcode already exists in the IndexedDB');
     }
 
     // Check if product name already exists
@@ -93,28 +93,6 @@ class DatabaseService {
       throw new Error('Product with this name already exists');
     }
 
-    // Check if product quantity is valid
-    if (product.quantity < 0) {
-      throw new Error('Product quantity cannot be negative');
-    }
-
-    // Check if product price is valid
-    if (product.price <= 0) {
-      throw new Error('Product price must be greater than zero');
-    }
-
-    // Check if product cost price is valid
-    if (product.costPrice < 0) {
-      throw new Error('Product cost price cannot be negative');
-    }
-
-    // Check if product unit is valid
-    if (!product.unit) {
-      throw new Error('Product unit is required');
-    }
-
-    
-    
     // Add timestamps
     const now = new Date().toISOString();
     const productWithTimestamp = {
@@ -122,7 +100,7 @@ class DatabaseService {
       createdAt: now,
       updatedAt: now
     };
-    
+
     try {
       const id = await db.add('products', productWithTimestamp);
       return id;
@@ -143,22 +121,22 @@ class DatabaseService {
    */
   async updateProduct(id, productData) {
     const db = await this.getDb();
-    
+
     try {
       // Get the current product
       const product = await db.get('products', id);
-      
+
       if (!product) {
         throw new Error('Product not found');
       }
-      
+
       // Update product data with timestamp
       const updatedProduct = {
         ...product,
         ...productData,
         updatedAt: new Date().toISOString()
       };
-      
+
       await db.put('products', updatedProduct);
       return true;
     } catch (error) {
@@ -184,7 +162,7 @@ class DatabaseService {
    */
   async findProductByBarcode(barcode) {
     const db = await this.getDb();
-    
+
     try {
       const index = db.transaction('products').store.index('barcode');
       const product = await index.get(barcode);
@@ -202,7 +180,7 @@ class DatabaseService {
    */
   async findProductById(id) {
     const db = await this.getDb();
-    
+
     try {
       const product = await db.get('products', id);
       return product || null;
@@ -219,10 +197,10 @@ class DatabaseService {
    */
   async getAllProducts(sortBy = 'name') {
     const db = await this.getDb();
-    
+
     try {
       const products = await db.getAll('products');
-      
+
       // Sort products
       products.sort((a, b) => {
         if (sortBy === 'price') {
@@ -234,7 +212,7 @@ class DatabaseService {
           return a.name.localeCompare(b.name);
         }
       });
-      
+
       return products;
     } catch (error) {
       console.error('Error getting all products:', error);
@@ -249,20 +227,20 @@ class DatabaseService {
    */
   async searchProducts(searchTerm) {
     const db = await this.getDb();
-    
+
     try {
       const products = await db.getAll('products');
-      
+
       // Filter products by name or barcode
       const filtered = products.filter(product => {
         const nameMatch = product.name.toLowerCase().includes(searchTerm.toLowerCase());
         const barcodeMatch = product.barcode.includes(searchTerm);
         return nameMatch || barcodeMatch;
       });
-      
+
       // Sort by name
       filtered.sort((a, b) => a.name.localeCompare(b.name));
-      
+
       return filtered;
     } catch (error) {
       console.error('Error searching products:', error);
@@ -279,7 +257,7 @@ class DatabaseService {
    */
   async createInvoice(invoice) {
     const db = await this.getDb();
-    
+
     // Add date and created_at
     const now = new Date().toISOString();
     const invoiceWithTimestamp = {
@@ -287,7 +265,7 @@ class DatabaseService {
       date: now,
       createdAt: now
     };
-    
+
     try {
       const id = await db.add('invoices', invoiceWithTimestamp);
       return id;
@@ -305,22 +283,22 @@ class DatabaseService {
    */
   async updateInvoice(id, invoiceData) {
     const db = await this.getDb();
-    
+
     try {
       // Get the current invoice
       const invoice = await db.get('invoices', id);
-      
+
       if (!invoice) {
         throw new Error('Invoice not found');
       }
-      
+
       // Update invoice data with timestamp
       const updatedInvoice = {
         ...invoice,
         ...invoiceData,
         updatedAt: new Date().toISOString()
       };
-      
+
       await db.put('invoices', updatedInvoice);
       return true;
     } catch (error) {
@@ -336,7 +314,7 @@ class DatabaseService {
    */
   async addInvoiceItem(item) {
     const db = await this.getDb();
-    
+
     try {
       const id = await db.add('invoice_items', item);
       return id;
@@ -353,20 +331,20 @@ class DatabaseService {
    */
   async deleteInvoiceItems(invoiceId) {
     const db = await this.getDb();
-    
+
     try {
       const tx = db.transaction('invoice_items', 'readwrite');
       const index = tx.store.index('invoiceId');
-      
+
       // Get all keys for this invoice
       let cursor = await index.openKeyCursor(IDBKeyRange.only(invoiceId));
-      
+
       // Delete each item
       while (cursor) {
         await tx.store.delete(cursor.primaryKey);
         cursor = await cursor.continue();
       }
-      
+
       await tx.done;
       return true;
     } catch (error) {
@@ -382,7 +360,7 @@ class DatabaseService {
    */
   async getInvoice(id) {
     const db = await this.getDb();
-    
+
     try {
       const invoice = await db.get('invoices', id);
       return invoice || null;
@@ -399,19 +377,19 @@ class DatabaseService {
    */
   async getInvoiceItems(invoiceId) {
     const db = await this.getDb();
-    
+
     try {
       const tx = db.transaction(['invoice_items', 'products']);
       const index = tx.objectStore('invoice_items').index('invoiceId');
-      
+
       // Get all items for this invoice
       const items = await index.getAll(invoiceId);
-      
+
       // Add product info to each item
       const itemsWithProductInfo = await Promise.all(items.map(async (item) => {
         try {
           const product = await tx.objectStore('products').get(item.productId);
-          
+
           return {
             ...item,
             name: product ? product.name : 'Unknown Product',
@@ -425,7 +403,7 @@ class DatabaseService {
           };
         }
       }));
-      
+
       return itemsWithProductInfo;
     } catch (error) {
       console.error('Error getting invoice items:', error);
@@ -441,19 +419,19 @@ class DatabaseService {
    */
   async getInvoicesByPeriod(startDate, endDate) {
     const db = await this.getDb();
-    
+
     try {
       const invoices = await db.getAll('invoices');
-      
+
       // Filter invoices by date range
       const filtered = invoices.filter(invoice => {
         const invoiceDate = new Date(invoice.date);
         return invoiceDate >= new Date(startDate) && invoiceDate <= new Date(endDate);
       });
-      
+
       // Sort by date (newest first)
       filtered.sort((a, b) => new Date(b.date) - new Date(a.date));
-      
+
       return filtered;
     } catch (error) {
       console.error('Error getting invoices by period:', error);
@@ -468,11 +446,11 @@ class DatabaseService {
    */
   async deleteInvoice(id) {
     const db = await this.getDb();
-    
+
     try {
       // Delete all items for this invoice
       await this.deleteInvoiceItems(id);
-      
+
       // Delete the invoice
       await db.delete('invoices', id);
       return true;
@@ -491,7 +469,7 @@ class DatabaseService {
   async getSalesAnalytics(startDate, endDate) {
     try {
       const invoices = await this.getInvoicesByPeriod(startDate, endDate);
-      
+
       if (invoices.length === 0) {
         return {
           totalSales: 0,
@@ -501,19 +479,19 @@ class DatabaseService {
           debtAmount: 0
         };
       }
-      
+
       const totalSales = invoices.reduce((sum, invoice) => sum + invoice.total, 0);
       const invoiceCount = invoices.length;
       const averageInvoice = totalSales / invoiceCount;
-      
+
       const paidAmount = invoices
         .filter(invoice => invoice.paymentStatus === true)
         .reduce((sum, invoice) => sum + invoice.total, 0);
-        
+
       const debtAmount = invoices
         .filter(invoice => invoice.paymentStatus === false)
         .reduce((sum, invoice) => sum + invoice.total, 0);
-      
+
       return {
         totalSales,
         invoiceCount,
@@ -536,7 +514,7 @@ class DatabaseService {
   async getProfitAnalytics(startDate, endDate) {
     try {
       const invoices = await this.getInvoicesByPeriod(startDate, endDate);
-      
+
       if (invoices.length === 0) {
         return {
           revenue: 0,
@@ -544,17 +522,17 @@ class DatabaseService {
           profit: 0
         };
       }
-      
+
       let revenue = 0;
       let cost = 0;
-      
+
       // For each invoice, calculate the total cost
       for (const invoice of invoices) {
         revenue += invoice.total;
-        
+
         // Get items for this invoice
         const items = await this.getInvoiceItems(invoice.id);
-        
+
         // Calculate cost for each item
         for (const item of items) {
           const product = await this.findProductById(item.productId);
@@ -563,9 +541,9 @@ class DatabaseService {
           }
         }
       }
-      
+
       const profit = revenue - cost;
-      
+
       return {
         revenue,
         cost,
@@ -587,21 +565,21 @@ class DatabaseService {
   async getTopProducts(startDate, endDate, limit = 5) {
     try {
       const invoices = await this.getInvoicesByPeriod(startDate, endDate);
-      
+
       if (invoices.length === 0) {
         return [];
       }
-      
+
       const productSales = {};
-      
+
       // For each invoice, get the items
       for (const invoice of invoices) {
         const items = await this.getInvoiceItems(invoice.id);
-        
+
         // Aggregate sales by product
         for (const item of items) {
           const productId = item.productId;
-          
+
           if (!productSales[productId]) {
             productSales[productId] = {
               productId,
@@ -610,17 +588,17 @@ class DatabaseService {
               totalSales: 0
             };
           }
-          
+
           productSales[productId].totalQuantity += item.quantity;
           productSales[productId].totalSales += item.total;
         }
       }
-      
+
       // Convert to array and sort by total sales
       const topProducts = Object.values(productSales)
         .sort((a, b) => b.totalSales - a.totalSales)
         .slice(0, limit);
-      
+
       return topProducts;
     } catch (error) {
       console.error('Error getting top products:', error);
