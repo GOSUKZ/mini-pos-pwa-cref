@@ -110,7 +110,6 @@ const ProductCreate = () => {
             // Check if product already exists
             // const existingProduct = await findProductByBarcode(barcode);
             const existingProductsList = await apiClient.searchLocalProducts(barcode);
-            console.log('🚀 ~ handleSubmit ~ existingProductsList:', existingProductsList);
 
             if ((existingProductsList?.length ?? 0) > 0) {
                 showSnackbar(`Product with barcode ${barcode} already exists`, 'error');

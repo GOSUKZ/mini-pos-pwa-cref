@@ -41,7 +41,7 @@ import Webcam from 'react-webcam';
 import { motion } from 'framer-motion';
 
 import Layout from '../components/common/Layout';
-import DatabaseContext from '../contexts/DatabaseContext';
+// import DatabaseContext from '../contexts/DatabaseContext';
 import UIContext from '../contexts/UIContext';
 import barcodeService from '../services/barcodeService';
 import apiClient from '../services/apiClient';
@@ -52,9 +52,9 @@ import { formatCurrency } from '../utils/formatUtils';
  * Handles barcode scanning and invoice creation
  */
 const ScanInvoice = () => {
-    const { addProduct, findProductByBarcode, findProductById, updateProductQuantity, createInvoice, addInvoiceItem } =
-        useContext(DatabaseContext);
-    const { showSnackbar, showDialog, setLoading } = useContext(UIContext);
+    // const { addProduct, findProductByBarcode, findProductById, updateProductQuantity, createInvoice, addInvoiceItem } =
+    //     useContext(DatabaseContext);
+    const { showSnackbar, showDialog, hideDialog, setLoading } = useContext(UIContext);
     const navigate = useNavigate();
 
     // State for camera and scanning
@@ -66,7 +66,9 @@ const ScanInvoice = () => {
     // State for invoice
     const [barcodeInput, setBarcodeInput] = useState('');
     const [invoiceItems, setInvoiceItems] = useState([]);
+
     const [isPaid, setIsPaid] = useState(true);
+
     const [editItem, setEditItem] = useState(null);
     const [editIndex, setEditIndex] = useState(-1);
     const [editQuantity, setEditQuantity] = useState(1);
@@ -140,29 +142,15 @@ const ScanInvoice = () => {
         try {
             setLoading(true);
 
-            // First check local database
-            const product = await findProductByBarcode(barcode);
+            // Check cloud database
+            const cloudProduct = await apiClient.getProduct(barcode);
 
-            if (product) {
-                // If product exists, add to invoice
-                if (product.price === 0) {
-                    // Product has no price, show price dialog
-                    handleProductWithoutPrice(product);
-                } else {
-                    // Add product to invoice
-                    addProductToInvoice(product);
-                }
+            if (cloudProduct) {
+                // Save the product to local database and add to invoice
+                handleCloudProduct(cloudProduct);
             } else {
-                // Check cloud database
-                const cloudProduct = await apiClient.getProduct(barcode);
-
-                if (cloudProduct) {
-                    // Save the product to local database and add to invoice
-                    handleCloudProduct(cloudProduct);
-                } else {
-                    // Show create product dialog
-                    showCreateProductDialog(barcode);
-                }
+                // Show create product dialog
+                showCreateProductDialog(barcode);
             }
         } catch (error) {
             console.error('Error processing barcode:', error);
@@ -175,41 +163,59 @@ const ScanInvoice = () => {
 
     // Handle product with no price
     const handleProductWithoutPrice = (product) => {
-        showDialog('Product has no price', `The product "${product.name}" has no price. Do you want to update it?`, [
-            {
-                text: 'Later',
-                color: 'inherit',
-                variant: 'outlined',
-                handler: () => {},
-            },
-            {
-                text: 'Update Now',
-                color: 'primary',
-                variant: 'contained',
-                handler: () => {
-                    navigate(`/product/${product.id}`);
+        showDialog(
+            'Product has no price',
+            `The product "${product.sku_name}" has no price. Do you want to update it?`,
+            [
+                {
+                    text: 'Later',
+                    color: 'inherit',
+                    variant: 'outlined',
+                    handler: () => hideDialog(),
                 },
-            },
-        ]);
+                {
+                    text: 'Update Now',
+                    color: 'primary',
+                    variant: 'contained',
+                    handler: () => {
+                        hideDialog();
+                        navigate(`/product/${product.id}`);
+                    },
+                },
+            ]
+        );
     };
 
     // Handle cloud product
     const handleCloudProduct = async (cloudProduct) => {
         // Save to local database
         const productData = {
-            barcode: cloudProduct.barcode,
-            name: cloudProduct.name,
-            price: 0, // Default to zero price
-            costPrice: 0,
+            ...cloudProduct,
             quantity: 0,
-            unit: cloudProduct.unit,
+            cost_price: 0,
+            price: 0,
         };
+        console.log('🚀 ~ handleCloudProduct ~ localProductId1:', cloudProduct);
+        const localProductsList = await apiClient.searchLocalProducts(cloudProduct.barcode);
+        const localProduct = localProductsList.find((product) => product.barcode === cloudProduct.barcode);
+        console.log('🚀 ~ handleCloudProduct ~ localProductId2:', localProduct);
         try {
-            const productId = await addProduct(productData);
-            const newProduct = await findProductById(productId);
+            if (!localProduct) {
+                // const productId = await addProduct(productData);
+                const productId = await apiClient.addLocalProduct(productData);
 
-            // Show price dialog
-            handleProductWithoutPrice(newProduct);
+                // const newProduct = await findProductById(productId);
+                const newProduct = await apiClient.byIdLocalProduct(productId);
+
+                // Show price dialog
+                handleProductWithoutPrice(newProduct);
+            } else {
+                // Show price dialog
+                handleProductWithoutPrice(localProduct);
+
+                // Add to invoice
+                addProductToInvoice(localProduct);
+            }
         } catch (error) {
             console.error('Error adding cloud product:', error);
             showSnackbar('Error adding product from cloud.', 'error');
@@ -223,13 +229,14 @@ const ScanInvoice = () => {
                 text: 'Cancel',
                 color: 'inherit',
                 variant: 'outlined',
-                handler: () => {},
+                handler: () => hideDialog(),
             },
             {
                 text: 'Create Product',
                 color: 'primary',
                 variant: 'contained',
                 handler: () => {
+                    hideDialog();
                     navigate(`/product/create?barcode=${barcode}`);
                 },
             },
@@ -238,11 +245,13 @@ const ScanInvoice = () => {
 
     // Add product to invoice
     const addProductToInvoice = (product) => {
+        console.log('🚀 ~ addProductToInvoice ~ product:', product);
         const item = {
             productId: product.id,
             barcode: product.barcode,
-            name: product.name,
+            sku_name: product.sku_name,
             price: product.price,
+            cost_price: product.cost_price,
             quantity: 1,
             total: product.price,
         };
@@ -252,13 +261,14 @@ const ScanInvoice = () => {
 
         if (existingIndex !== -1) {
             // Update existing item
-            const updatedItems = [...invoiceItems];
-            updatedItems[existingIndex].quantity += 1;
-            updatedItems[existingIndex].total =
-                updatedItems[existingIndex].quantity * updatedItems[existingIndex].price;
-
-            setInvoiceItems(updatedItems);
-            showSnackbar(`Added: ${product.name} (x${updatedItems[existingIndex].quantity})`, 'success');
+            setInvoiceItems((prevItems) => {
+                const updatedItems = [...prevItems];
+                updatedItems[existingIndex].quantity += 1;
+                updatedItems[existingIndex].total =
+                    updatedItems[existingIndex].quantity * updatedItems[existingIndex].price;
+                return updatedItems;
+            });
+            showSnackbar(`Added: ${product.name}`, 'success');
         } else {
             // Add new item
             setInvoiceItems((prevItems) => [...prevItems, item]);
@@ -283,7 +293,7 @@ const ScanInvoice = () => {
             // Start scanning with a short delay to ensure camera is initialized
             const timer = setTimeout(() => {
                 barcodeService.startScanning(webcamRef.current.video, handleBarcodeScan, selectedCamera);
-            }, 1000);
+            }, 1200);
 
             return () => clearTimeout(timer);
         }
@@ -308,15 +318,16 @@ const ScanInvoice = () => {
     // Save edited item
     const saveEditedItem = () => {
         if (editIndex >= 0 && editItem) {
-            const updatedItems = [...invoiceItems];
-            updatedItems[editIndex] = {
-                ...editItem,
-                quantity: editQuantity,
-                price: editPrice,
-                total: editQuantity * editPrice,
-            };
-
-            setInvoiceItems(updatedItems);
+            setInvoiceItems((prevItems) => {
+                const updatedItems = [...prevItems];
+                updatedItems[editIndex] = {
+                    ...editItem,
+                    quantity: editQuantity,
+                    price: editPrice,
+                    total: editQuantity * editPrice,
+                };
+                return updatedItems;
+            });
             closeEditDialog();
             showSnackbar('Item updated', 'success');
         }
@@ -324,9 +335,11 @@ const ScanInvoice = () => {
 
     // Remove item from invoice
     const removeItem = (index) => {
-        const updatedItems = [...invoiceItems];
-        updatedItems.splice(index, 1);
-        setInvoiceItems(updatedItems);
+        setInvoiceItems((prevItems) => {
+            const updatedItems = [...prevItems];
+            updatedItems.splice(index, 1);
+            return updatedItems;
+        });
 
         if (isEditDialogOpen) {
             closeEditDialog();
@@ -341,37 +354,39 @@ const ScanInvoice = () => {
             showSnackbar('Cannot save empty invoice', 'warning');
             return;
         }
+        setLoading(true);
+
+        // Create invoice
+        const newInvoice = (Array.isArray(invoiceItems) ? invoiceItems : []).map((item) => ({
+            product_id: item.productId,
+            quantity: item.quantity,
+            price: item.price,
+            cost_price: item.price,
+        }));
 
         try {
-            setLoading(true);
-
-            // Calculate total
-            const total = calculateTotal();
-
-            // Create invoice
-            const invoiceId = await createInvoice({
-                total,
-                paymentStatus: isPaid,
-                additionalInfo: '',
-            });
+            const invoiceId = await apiClient.createLocalInvoice(newInvoice);
+            console.log('🚀 ~ saveInvoice ~ invoiceId:', invoiceId);
 
             // Add invoice items
-            for (const item of invoiceItems) {
-                await addInvoiceItem({
-                    invoiceId,
-                    productId: item.productId,
-                    quantity: item.quantity,
-                    price: item.price,
-                    total: item.total,
-                });
+            // for (const item of invoiceItems) {
+            //     await addInvoiceItem({
+            //         invoiceId,
+            //         productId: item.productId,
+            //         quantity: item.quantity,
+            //         price: item.price,
+            //         total: item.total,
+            //     });
 
-                // Update product quantity
-                const product = await findProductById(item.productId);
-                if (product) {
-                    const newQuantity = Math.max(0, product.quantity - item.quantity);
-                    await updateProductQuantity(item.productId, newQuantity);
-                }
-            }
+            //     // Update product quantity
+            //     // const product = await findProductById(item.productId);
+            //     const product = await apiClient.byIdLocalProduct(item.productId);
+            //     if (product) {
+            //         const newQuantity = Math.max(0, product.quantity - item.quantity);
+            //         // await updateProductQuantity(item.productId, newQuantity);
+            //         await apiClient.updateLocalProduct(item.productId, { quantity: newQuantity });
+            //     }
+            // }
 
             // Clear invoice
             setInvoiceItems([]);
@@ -451,6 +466,7 @@ const ScanInvoice = () => {
                             <Webcam
                                 ref={webcamRef}
                                 audio={false}
+                                autoPlay={!!isCameraOpen}
                                 videoConstraints={{
                                     facingMode: 'environment',
                                     width: { ideal: 1280 },
@@ -596,7 +612,7 @@ const ScanInvoice = () => {
                                             text: 'Cancel',
                                             color: 'inherit',
                                             variant: 'outlined',
-                                            handler: () => {},
+                                            handler: () => hideDialog(),
                                         },
                                         {
                                             text: 'Clear',
@@ -734,7 +750,7 @@ const ScanInvoice = () => {
 
                 <DialogContent dividers>
                     <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
-                        {editItem?.name}
+                        {editItem?.sku_name}
                     </Typography>
 
                     <Box sx={{ my: 3 }}>
@@ -775,7 +791,16 @@ const ScanInvoice = () => {
                             label="Price"
                             type="number"
                             value={editPrice}
-                            onChange={(e) => setEditPrice(parseFloat(e.target.value) || 0)}
+                            defaultValue={editItem?.price ?? 0}
+                            onChange={(e) => {
+                                const value = e.target.value;
+                                if (value && value.length > 1 && value[0] === '0') {
+                                    e.target.value = value.slice(1);
+                                    setEditPrice(value.slice(1));
+                                } else {
+                                    setEditPrice(value);
+                                }
+                            }}
                             fullWidth
                             variant="outlined"
                             InputProps={{

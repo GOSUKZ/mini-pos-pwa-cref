@@ -106,10 +106,7 @@ class ApiClient {
 
     if (data) {
       // Map the API response to the format we expect
-      return {
-        barcode: data.barcode,
-        name: data.sku_name
-      };
+      return data;
     }
 
     return null;
@@ -219,6 +216,49 @@ class ApiClient {
   }
   // *
 
+  async createLocalInvoice(invoiceList = []) {
+    console.log("🚀 ~ ApiClient ~ createLocalInvoice ~ invoiceList:", invoiceList)
+    console.log("Creating invoice");
+    if (invoiceList.length === 0) return null;
+    const res = await this.apiRequest('/sales/create', {
+      method: 'POST',
+      body: JSON.stringify(invoiceList)
+    });
+    return res?.order_id;
+  }
+
+  async getLocalInvoices() {
+    console.log("Getting local invoices");
+    const res = await this.apiRequest('/sales', {
+      method: 'GET'
+    });
+    return res;
+  }
+
+  async byIdLocalInvoice(id) {
+    if (!id) return null;
+    console.log("Getting local invoice by ID:", id);
+    const res = await this.apiRequest(`/sales/${id}`, {
+      method: 'GET'
+    });
+    return res;
+  }
+
+  async getLocalInvoicesByPeriod(startDate, endDate) {
+    console.log("Getting local invoices by period");
+    const res = await this.apiRequest(`/sales?start_date=${startDate}&end_date=${endDate}`, {
+      method: 'GET'
+    });
+    return res?.content || [];
+  }
+
+  async deleteLocalInvoice(id) {
+    console.log("Deleting local invoice:", id);
+    const res = await this.apiRequest(`/sales/cancel?order_id=${id}`, {
+      method: 'DELETE'
+    });
+    return !!res;
+  }
 }
 
 // Create a singleton instance
