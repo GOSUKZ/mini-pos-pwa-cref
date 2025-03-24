@@ -362,7 +362,7 @@ const ScanInvoice = () => {
 
         // Create invoice
         const newInvoice = (Array.isArray(invoiceItems) ? invoiceItems : []).map((item) => ({
-            product_id: item.id,
+            product_id: item.id || item.productId,
             quantity: item.quantity,
             price: item.price,
             cost_price: item.cost_price,

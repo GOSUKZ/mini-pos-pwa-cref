@@ -103,7 +103,14 @@ const InvoiceHistory = () => {
         // Filter by status
         if (status !== 'all') {
             const isPaid = status === 'paid';
-            filtered = filtered.filter((invoice) => invoice.paymentStatus === isPaid);
+
+            filtered = filtered.filter((invoice) => {
+                if (isPaid) {
+                    return invoice.paymentStatus === 'pending';
+                } else {
+                    return invoice.paymentStatus !== 'pending';
+                }
+            });
         }
 
         setFilteredInvoices(filtered);
@@ -144,7 +151,11 @@ const InvoiceHistory = () => {
 
     const editInvoice = (invoice) => {
         closeMenu();
-        navigate(`/invoice/${invoice.order_id}/edit`);
+        // navigate(`/invoice/${invoice.order_id}/edit`);
+    };
+
+    const printInvoice = (invoice) => {
+        closeMenu();
     };
 
     const handleDeleteInvoice = (invoice) => {
@@ -475,7 +486,7 @@ const InvoiceHistory = () => {
                         <ListItemText>Edit</ListItemText>
                     </MenuItem>
 
-                    <MenuItem>
+                    <MenuItem onClick={() => selectedInvoice && printInvoice(selectedInvoice)}>
                         <ListItemIcon>
                             <PrintIcon fontSize="small" />
                         </ListItemIcon>

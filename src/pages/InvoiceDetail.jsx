@@ -1,3 +1,4 @@
+import html2canvas from 'html2canvas';
 import React, { useState, useEffect, useContext, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
@@ -116,37 +117,41 @@ const InvoiceDetail = () => {
     const handlePrint = () => {
         if (invoiceRef.current) {
             const printContent = invoiceRef.current.innerHTML;
-            const originalContent = document.body.innerHTML;
+            const printWindow = window.open('', '', 'width=800,height=600');
 
-            document.body.innerHTML = `
-        <html>
-          <head>
-            <title>Invoice #${invoice.order_id}</title>
-            <style>
-              body { font-family: Arial, sans-serif; padding: 20px; }
-              table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
-              th, td { padding: 8px; text-align: left; border-bottom: 1px solid #ddd; }
-              th { background-color: #f2f2f2; }
-              .header { margin-bottom: 20px; }
-              .footer { margin-top: 30px; }
-              .total { font-weight: bold; font-size: 16px; margin-top: 20px; }
-              .status { padding: 5px 10px; border-radius: 4px; display: inline-block; }
-              .paid { background-color: #e6f7e6; color: #2e7d32; }
-              .unpaid { background-color: #fdecea; color: #d32f2f; }
-              @media print {
-                button { display: none; }
-              }
-            </style>
-          </head>
-          <body>
-            ${printContent}
-          </body>
-        </html>
-      `;
+            printWindow.document.write(`
+              <html>
+                <head>
+                  <title>Invoice #${invoice.order_id}</title>
+                  <style>
+                    body { font-family: Arial, sans-serif; padding: 20px; }
+                    table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+                    th, td { padding: 8px; text-align: left; border-bottom: 1px solid #ddd; }
+                    th { background-color: #f2f2f2; }
+                    .header { margin-bottom: 20px; }
+                    .footer { margin-top: 30px; }
+                    .total { font-weight: bold; font-size: 16px; margin-top: 20px; }
+                    .status { padding: 5px 10px; border-radius: 4px; display: inline-block; }
+                    .paid { background-color: #e6f7e6; color: #2e7d32; }
+                    .unpaid { background-color: #fdecea; color: #d32f2f; }
+                    @media print { button { display: none; } }
+                  </style>
+                </head>
+                <body>
+                  ${printContent}
+                </body>
+              </html>
+            `);
 
-            window.print();
-            document.body.innerHTML = originalContent;
-            window.location.reload();
+            printWindow.document.close();
+            printWindow.focus();
+
+            // Закрываем окно после завершения печати
+            printWindow.addEventListener('afterprint', function () {
+                printWindow.close();
+            });
+
+            printWindow.print();
         }
     };
 
@@ -218,20 +223,46 @@ const InvoiceDetail = () => {
             name: 'Download PDF',
             action: () => {
                 if (invoiceRef.current) {
-                    // Создаём новый экземпляр jsPDF (формат A4, ориентация горизонтальная)
-                    const doc = new jsPDF('l', 'pt', 'a4');
+                    // Рендерим содержимое в canvas с увеличенным масштабом для лучшего качества
+                    html2canvas(invoiceRef.current, { scale: 2 }).then((canvas) => {
+                        const imgData = canvas.toDataURL('image/png');
+                        const pdf = new jsPDF({
+                            orientation: 'landscape',
+                            unit: 'mm',
+                            format: 'a4',
+                        });
 
-                    // Получаем HTML-содержимое для формирования PDF
-                    const invoiceHTML = invoiceRef.current.innerHTML;
+                        // Получаем размеры PDF-страницы в мм
+                        const pageWidth = pdf.internal.pageSize.getWidth();
+                        const pageHeight = pdf.internal.pageSize.getHeight();
 
-                    // Опционально можно задать стили, если требуется дополнительное форматирование.
-                    // Метод fromHTML преобразует базовый HTML в PDF. Учтите, что поддержка сложных стилей может быть ограничена.
-                    doc.fromHTML(invoiceHTML, 20, 20, {
-                        width: 555, // Ширина области рендеринга (подбирается экспериментально)
+                        // Получаем размеры изображения
+                        const imgWidth = canvas.width;
+                        const imgHeight = canvas.height;
+
+                        // Рассчитываем масштаб, чтобы вписать ширину изображения в ширину PDF
+                        const ratio = pageWidth / imgWidth;
+                        const pdfImgWidth = pageWidth;
+                        const pdfImgHeight = imgHeight * ratio;
+
+                        // Если высота изображения меньше высоты страницы, просто добавляем изображение
+                        if (pdfImgHeight <= pageHeight) {
+                            pdf.addImage(imgData, 'PNG', 0, 0, pdfImgWidth, pdfImgHeight);
+                        } else {
+                            // Если изображение слишком высокое, разбиваем его на несколько страниц
+                            let position = 0;
+                            let remainingHeight = pdfImgHeight;
+                            while (remainingHeight > 0) {
+                                pdf.addImage(imgData, 'PNG', 0, -position, pdfImgWidth, pdfImgHeight);
+                                remainingHeight -= pageHeight;
+                                position += pageHeight;
+                                if (remainingHeight > 0) {
+                                    pdf.addPage();
+                                }
+                            }
+                        }
+                        pdf.save(`Invoice_${invoice.order_id}.pdf`);
                     });
-
-                    // Сохраняем файл с именем, включающим номер заказа
-                    doc.save(`Invoice_${invoice.order_id}.pdf`);
                 }
             },
         },
