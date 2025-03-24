@@ -163,7 +163,7 @@ class ApiClient {
     };
 
 
-    const res = await this.apiRequest('/products/local', {
+    const res = await this.apiRequest('/products/local/', {
       method: 'POST',
       body: JSON.stringify(newProduct)
     });
