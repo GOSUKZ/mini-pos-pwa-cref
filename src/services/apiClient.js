@@ -184,7 +184,7 @@ class ApiClient {
 
   async searchLocalProducts(searchTerm) {
     console.log("Searching local products:", searchTerm);
-    const res = await this.apiRequest(`/products/local?search=${searchTerm}`, {
+    const res = await this.apiRequest(`/products/local/?search=${searchTerm}`, {
       method: 'GET'
     });
     return res?.content || [];
@@ -261,7 +261,7 @@ class ApiClient {
 
   async getLocalInvoicesByPeriod(startDate, endDate) {
     console.log("Getting local invoices by period");
-    const res = await this.apiRequest(`/sales?start_date=${startDate}&end_date=${endDate}`, {
+    const res = await this.apiRequest(`/sales/?start_date=${startDate}&end_date=${endDate}`, {
       method: 'GET'
     });
     return res?.content || [];
