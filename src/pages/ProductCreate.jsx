@@ -66,7 +66,7 @@ const ProductCreate = () => {
 
                 // Check if product already exists
                 // const existingProduct = await findProductByBarcode(detectedBarcode);
-                const existingProductsList = await apiClient.searchLocalProducts(detectedBarcode);
+                const existingProductsList = (await apiClient.searchLocalProducts(detectedBarcode)) || [];
                 if ((existingProductsList?.length ?? 0) > 0) {
                     showSnackbar(`Product with barcode ${detectedBarcode} already exists`, 'warning');
                 }
@@ -109,7 +109,7 @@ const ProductCreate = () => {
 
             // Check if product already exists
             // const existingProduct = await findProductByBarcode(barcode);
-            const existingProductsList = await apiClient.searchLocalProducts(barcode);
+            const existingProductsList = (await apiClient.searchLocalProducts(barcode)) || [];
 
             if ((existingProductsList?.length ?? 0) > 0) {
                 showSnackbar(`Product with barcode ${barcode} already exists`, 'error');

@@ -195,23 +195,27 @@ const ScanInvoice = () => {
             cost_price: 0,
             price: 0,
         };
-        console.log('🚀 ~ handleCloudProduct ~ localProductId1:', cloudProduct);
         const localProductsList = await apiClient.searchLocalProducts(cloudProduct.barcode);
         const localProduct = localProductsList.find((product) => product.barcode === cloudProduct.barcode);
-        console.log('🚀 ~ handleCloudProduct ~ localProductId2:', localProduct);
         try {
             if (!localProduct) {
                 // const productId = await addProduct(productData);
                 const productId = await apiClient.addLocalProduct(productData);
-
-                // const newProduct = await findProductById(productId);
-                const newProduct = await apiClient.byIdLocalProduct(productId);
-
-                // Show price dialog
-                handleProductWithoutPrice(newProduct);
+                if (productId) {
+                    // const newProduct = await findProductById(productId);
+                    const newProduct = await apiClient.byIdLocalProduct(productId);
+                    if (newProduct && newProduct.price === 0) {
+                        // Show price dialog
+                        handleProductWithoutPrice(newProduct);
+                    }
+                    // Add to invoice
+                    addProductToInvoice(newProduct);
+                }
             } else {
-                // Show price dialog
-                handleProductWithoutPrice(localProduct);
+                if (localProduct.price === 0) {
+                    // Show price dialog
+                    handleProductWithoutPrice(localProduct);
+                }
 
                 // Add to invoice
                 addProductToInvoice(localProduct);
@@ -257,7 +261,7 @@ const ScanInvoice = () => {
         };
 
         // Check if product already exists in invoice
-        const existingIndex = invoiceItems.findIndex((existingItem) => existingItem.productId === item.productId);
+        const existingIndex = invoiceItems.findIndex((existingItem) => existingItem.barcode === item.barcode);
 
         if (existingIndex !== -1) {
             // Update existing item
@@ -268,11 +272,11 @@ const ScanInvoice = () => {
                     updatedItems[existingIndex].quantity * updatedItems[existingIndex].price;
                 return updatedItems;
             });
-            showSnackbar(`Added: ${product.name}`, 'success');
+            showSnackbar(`Added: ${product.sku_name}`, 'success');
         } else {
             // Add new item
             setInvoiceItems((prevItems) => [...prevItems, item]);
-            showSnackbar(`Added: ${product.name}`, 'success');
+            showSnackbar(`Added: ${product.sku_name}`, 'success');
         }
     };
 
@@ -358,10 +362,10 @@ const ScanInvoice = () => {
 
         // Create invoice
         const newInvoice = (Array.isArray(invoiceItems) ? invoiceItems : []).map((item) => ({
-            product_id: item.productId,
+            product_id: item.id,
             quantity: item.quantity,
             price: item.price,
-            cost_price: item.price,
+            cost_price: item.cost_price,
         }));
 
         try {
@@ -651,7 +655,7 @@ const ScanInvoice = () => {
                         <List sx={{ flexGrow: 1, overflow: 'auto', p: 0 }}>
                             {invoiceItems.map((item, index) => (
                                 <ListItem
-                                    key={`${item.productId}-${index}`}
+                                    key={`${item.id}-${index}`}
                                     divider
                                     secondaryAction={
                                         <IconButton edge="end" onClick={() => openEditDialog(item, index)}>
@@ -660,7 +664,7 @@ const ScanInvoice = () => {
                                     }
                                 >
                                     <ListItemText
-                                        primary={item.name}
+                                        primary={item.sku_name}
                                         secondary={
                                             <Typography variant="body2" color="text.secondary" component="span">
                                                 {item.quantity} x {formatCurrency(item.price)} =

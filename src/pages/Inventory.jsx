@@ -66,9 +66,9 @@ const Inventory = () => {
             let productList;
 
             if (searchTerm) {
-                productList = await searchProducts(searchTerm);
+                productList = (await searchProducts(searchTerm)) ?? [];
             } else {
-                productList = await getAllProducts(sortBy);
+                productList = (await getAllProducts(sortBy)) ?? [];
                 console.log('🚀 ~ loadProducts ~ productList:', productList);
             }
 
@@ -303,7 +303,7 @@ const Inventory = () => {
                         >
                             <CircularProgress />
                         </Box>
-                    ) : products.length === 0 ? (
+                    ) : (products ?? []).length === 0 ? (
                         <Box
                             sx={{
                                 flexGrow: 1,
