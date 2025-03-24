@@ -46,9 +46,11 @@ import dayjs from 'dayjs';
 import { motion } from 'framer-motion';
 
 import Layout from '../components/common/Layout';
-import DatabaseContext from '../contexts/DatabaseContext';
+// import DatabaseContext from '../contexts/DatabaseContext';
 import UIContext from '../contexts/UIContext';
-import { formatCurrency, formatNumber, formatPercent } from '../utils/formatUtils';
+import { formatCurrency, formatNumber } from '../utils/formatUtils';
+
+import apiClient from '../services/apiClient';
 
 // Register ChartJS components
 ChartJS.register(
@@ -68,7 +70,7 @@ ChartJS.register(
  * Displays sales and product analytics
  */
 const Analytics = () => {
-    const { getSalesAnalytics, getProfitAnalytics, getTopProducts, getInvoicesByPeriod } = useContext(DatabaseContext);
+    // const { getSalesAnalytics, getProfitAnalytics, getTopProducts, getInvoicesByPeriod } = useContext(DatabaseContext);
     const { showSnackbar } = useContext(UIContext);
     const theme = useTheme();
 
@@ -96,17 +98,33 @@ const Analytics = () => {
             const startDateFormatted = startDate.startOf('day').toISOString();
             const endDateFormatted = endDate.endOf('day').toISOString();
 
+            const res = await apiClient.getSalesAnalytics(startDateFormatted, endDateFormatted);
+
+            const sales = {
+                totalSales: res?.total_sales_sum ?? 0,
+                invoiceCount: res?.total_sales_count ?? 0,
+                averageInvoice: res?.average_invoice ?? 0,
+                paidAmount: res?.total_paid_sum ?? 0,
+                debtAmount: res?.total_unpaid_sum ?? 0,
+            };
+
             // Get sales analytics
-            const sales = await getSalesAnalytics(startDateFormatted, endDateFormatted);
-            console.log('🚀 ~ loadAnalyticsData ~ sales:', sales);
+            // const sales = await getSalesAnalytics(startDateFormatted, endDateFormatted);
             setSalesData(sales);
 
             // Get profit analytics
-            const profit = await getProfitAnalytics(startDateFormatted, endDateFormatted);
+            // const profit = await getProfitAnalytics(startDateFormatted, endDateFormatted);
+
+            const profit = {
+                revenue: 0,
+                cost: 0,
+                profit: res?.profit ?? 0,
+            };
             setProfitData(profit);
 
             // Get top products
-            const products = await getTopProducts(startDateFormatted, endDateFormatted, 5);
+            // const products = await getTopProducts(startDateFormatted, endDateFormatted, 5);
+            const products = res?.top_products ?? [];
             setTopProducts(products);
 
             // Get time series data (daily sales for the period)
@@ -123,7 +141,8 @@ const Analytics = () => {
     const loadTimeSeriesData = async (startDateFormatted, endDateFormatted) => {
         try {
             // Get all invoices for the period
-            const invoices = await getInvoicesByPeriod(startDateFormatted, endDateFormatted);
+            // const invoices = await getInvoicesByPeriod(startDateFormatted, endDateFormatted);
+            const invoices = await apiClient.getLocalInvoicesByPeriod(startDateFormatted, endDateFormatted);
 
             // Group invoices by date and calculate daily totals
             const dailySales = {};
@@ -151,16 +170,16 @@ const Analytics = () => {
 
             // Populate with invoice data
             invoices.forEach((invoice) => {
-                const invoiceDate = dayjs(invoice.date).format('YYYY-MM-DD');
+                const invoiceDate = dayjs(invoice.created_at).format('YYYY-MM-DD');
 
                 if (dailySales[invoiceDate]) {
-                    dailySales[invoiceDate].total += invoice.total;
+                    dailySales[invoiceDate].total += invoice.total_amount;
                     dailySales[invoiceDate].count += 1;
 
-                    if (invoice.paymentStatus) {
-                        dailySales[invoiceDate].paid += invoice.total;
+                    if (invoice.status === 'paid') {
+                        dailySales[invoiceDate].paid += invoice.total_amount;
                     } else {
-                        dailySales[invoiceDate].unpaid += invoice.total;
+                        dailySales[invoiceDate].unpaid += invoice.total_amount;
                     }
                 }
             });
@@ -238,17 +257,17 @@ const Analytics = () => {
     };
 
     // Format chart data for Profit
-    const profitChartData = {
-        labels: ['Profit', 'Cost'],
-        datasets: [
-            {
-                data: [profitData?.profit || 0, profitData?.cost || 0],
-                backgroundColor: [theme.palette.primary.main, theme.palette.error.light],
-                borderColor: [theme.palette.primary.dark, theme.palette.error.main],
-                borderWidth: 1,
-            },
-        ],
-    };
+    // const profitChartData = {
+    //     labels: ['Profit', 'Cost'],
+    //     datasets: [
+    //         {
+    //             data: [profitData?.profit || 0, profitData?.cost || 0],
+    //             backgroundColor: [theme.palette.primary.main, theme.palette.error.light],
+    //             borderColor: [theme.palette.primary.dark, theme.palette.error.main],
+    //             borderWidth: 1,
+    //         },
+    //     ],
+    // };
 
     // Format chart data for Time Series
     const timeSeriesChartData = {
@@ -267,11 +286,14 @@ const Analytics = () => {
 
     // Format chart data for Top Products
     const topProductsChartData = {
-        labels: topProducts.map((product) => product.name),
+        labels: topProducts.map(
+            (product) =>
+                `${`${product.product_name}`.slice(0, 20)}${`${product.product_name}`.length > 10 ? '...' : ''}`
+        ),
         datasets: [
             {
                 label: 'Sales',
-                data: topProducts.map((product) => product.totalSales),
+                data: topProducts.map((product) => product.total_sold),
                 backgroundColor: [
                     theme.palette.primary.main,
                     theme.palette.secondary.main,
@@ -511,7 +533,7 @@ const Analytics = () => {
                         sx={{ borderBottom: 1, borderColor: 'divider' }}
                     >
                         <Tab icon={<TimelineIcon />} label="Sales Trend" />
-                        <Tab icon={<MonetizationOnIcon />} label="Revenue" />
+                        {/* <Tab icon={<MonetizationOnIcon />} label="Revenue" /> */}
                         <Tab icon={<EmojiEventsIcon />} label="Top Products" />
                     </Tabs>
 
@@ -535,92 +557,8 @@ const Analytics = () => {
                             </Box>
                         )}
 
-                        {/* Revenue Chart */}
-                        {tabValue === 1 && (
-                            <Grid container spacing={2}>
-                                <Grid item xs={12} md={6}>
-                                    <Box sx={{ height: 300, mb: 2 }}>
-                                        <Bar
-                                            data={salesChartData}
-                                            options={{
-                                                ...chartOptions,
-                                                plugins: {
-                                                    ...chartOptions.plugins,
-                                                    title: {
-                                                        ...chartOptions.plugins.title,
-                                                        text: 'Sales Breakdown',
-                                                    },
-                                                },
-                                            }}
-                                        />
-                                    </Box>
-                                </Grid>
-                                <Grid item xs={12} md={6}>
-                                    <Box sx={{ height: 300, mb: 2 }}>
-                                        <Pie
-                                            data={profitChartData}
-                                            options={{
-                                                ...chartOptions,
-                                                plugins: {
-                                                    ...chartOptions.plugins,
-                                                    title: {
-                                                        ...chartOptions.plugins.title,
-                                                        text: 'Profit vs Cost',
-                                                    },
-                                                },
-                                            }}
-                                        />
-                                    </Box>
-                                </Grid>
-                                <Grid item xs={12}>
-                                    <Divider sx={{ my: 2 }} />
-                                    <Typography variant="h6" gutterBottom>
-                                        Revenue Summary
-                                    </Typography>
-                                    <Grid container spacing={2}>
-                                        <Grid item xs={12} sm={4}>
-                                            <Typography variant="subtitle2" color="text.secondary">
-                                                Total Revenue:
-                                            </Typography>
-                                            <Typography variant="h6" color="primary" fontWeight="bold">
-                                                {formatCurrency(profitData?.revenue || 0)}
-                                            </Typography>
-                                        </Grid>
-                                        <Grid item xs={12} sm={4}>
-                                            <Typography variant="subtitle2" color="text.secondary">
-                                                Total Cost:
-                                            </Typography>
-                                            <Typography variant="h6" color="error" fontWeight="bold">
-                                                {formatCurrency(profitData?.cost || 0)}
-                                            </Typography>
-                                        </Grid>
-                                        <Grid item xs={12} sm={4}>
-                                            <Typography variant="subtitle2" color="text.secondary">
-                                                Net Profit:
-                                            </Typography>
-                                            <Typography variant="h6" color="success" fontWeight="bold">
-                                                {formatCurrency(profitData?.profit || 0)}
-                                            </Typography>
-                                        </Grid>
-                                        <Grid item xs={12}>
-                                            <Typography variant="subtitle2" color="text.secondary">
-                                                Profit Margin:
-                                            </Typography>
-                                            <Typography variant="h6" color="secondary" fontWeight="bold">
-                                                {formatPercent(
-                                                    profitData?.revenue > 0
-                                                        ? (profitData.profit / profitData.revenue) * 100
-                                                        : 0
-                                                )}
-                                            </Typography>
-                                        </Grid>
-                                    </Grid>
-                                </Grid>
-                            </Grid>
-                        )}
-
                         {/* Top Products Chart */}
-                        {tabValue === 2 && (
+                        {tabValue === 1 && (
                             <Grid container spacing={2}>
                                 <Grid item xs={12} md={6}>
                                     <Box sx={{ height: 300, mb: 2 }}>
@@ -669,11 +607,14 @@ const Analytics = () => {
                                                         </Avatar>
                                                     </ListItemAvatar>
                                                     <ListItemText
-                                                        primary={product.name}
-                                                        secondary={`Quantity: ${product.totalQuantity}`}
+                                                        primary={
+                                                            `${product.product_name}`.slice(0, 40) +
+                                                            (product.product_name.length > 40 ? '...' : '')
+                                                        }
+                                                        secondary={`Quantity: ${product.total_sold}`}
                                                     />
                                                     <Typography variant="body1" fontWeight="bold" color="primary.main">
-                                                        {formatCurrency(product.totalSales)}
+                                                        {formatCurrency(product.product_price)}
                                                     </Typography>
                                                 </ListItem>
                                             ))

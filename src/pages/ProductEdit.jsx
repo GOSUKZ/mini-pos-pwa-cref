@@ -106,7 +106,7 @@ const ProductEdit = () => {
             const productData = {
                 name,
                 price: parseFloat(price) || 0,
-                costPrice: parseFloat(costPrice) || 0,
+                cost_price: parseFloat(costPrice) || 0,
                 quantity: parseInt(quantity) || 0,
                 unit: unit || 'шт',
             };

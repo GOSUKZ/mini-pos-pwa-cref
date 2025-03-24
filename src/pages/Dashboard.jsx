@@ -108,7 +108,7 @@ const Dashboard = () => {
         };
 
         loadDashboardData();
-    }, [getInvoicesByPeriod, getSalesAnalytics, getTopProducts]);
+    }, []);
 
     // Navigate to different pages
     const navigateTo = (path) => {
