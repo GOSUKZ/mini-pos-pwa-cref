@@ -155,6 +155,174 @@ const InvoiceHistory = () => {
     };
 
     const printInvoice = (invoice) => {
+        if (invoice) {
+            const printWindow = window.open('', '', 'width=800,height=600');
+
+            printWindow.document.write(`
+                <html>
+            <head>
+        <title>
+            Invoice #${invoice.order_id}
+        </title>
+        <style>
+            body {
+              font-family: Arial,sans-serif;
+              padding: 20px;
+            }
+            
+            table {
+              width: 100%;
+              border-collapse: collapse;
+              margin-bottom: 20px;
+            }
+            
+            th,td {
+              padding: 8px;
+              text-align: left;
+              border-bottom: 1px solid #ddd;
+            }
+            
+            th {
+              background-color: #f2f2f2;
+            }
+            
+            .header {
+              margin-bottom: 20px;
+            }
+            
+            .footer {
+              margin-top: 30px;
+            }
+            
+            .total {
+              font-weight: bold;
+              font-size: 16px;
+              margin-top: 20px;
+            }
+            
+            .status {
+              padding: 5px 10px;
+              border-radius: 4px;
+              display: inline-block;
+            }
+            
+            .paid {
+              background-color: #e6f7e6;
+              color: #2e7d32;
+            }
+            
+            .unpaid {
+              background-color: #fdecea;
+              color: #d32f2f;
+            }
+            
+            @media print {
+              button {
+                display: none;
+              }
+            
+            }
+        </style>
+    </head>
+    <body>
+        <div class="MuiBox-root css-1hpa69f">
+            <div class="MuiBox-root css-0">
+                <h1 class="MuiTypography-root MuiTypography-h5 MuiTypography-gutterBottom css-5kjxxr-MuiTypography-root">
+                    Invoice #${invoice.order_id}
+                </h1>
+                <p class="MuiTypography-root MuiTypography-body1 css-k0v82y-MuiTypography-root">
+                    Date: ${invoice.created_at}
+                </p>
+            </div>
+            <div class="MuiChip-root MuiChip-filled MuiChip-sizeMedium MuiChip-colorError MuiChip-filledError css-55zt6e-MuiChip-root">
+                <span class="MuiChip-label MuiChip-labelMedium css-6od3lo-MuiChip-label">
+                    UNPAID: ${invoice.updated_at}
+                </span>
+            </div>
+        </div>
+        <hr class="MuiDivider-root MuiDivider-fullWidth css-1iknwlx-MuiDivider-root">
+        <div class="MuiPaper-root MuiPaper-outlined MuiPaper-rounded MuiTableContainer-root css-7t5xwb-MuiPaper-root-MuiTableContainer-root">
+            <table class="MuiTable-root css-1nlai5s-MuiTable-root">
+                <thead class="MuiTableHead-root css-15wwp11-MuiTableHead-root">
+                    <tr class="MuiTableRow-root MuiTableRow-head css-zjxnjz-MuiTableRow-root">
+                        <th class="MuiTableCell-root MuiTableCell-head MuiTableCell-sizeMedium css-3j5v83-MuiTableCell-root" scope="col">
+                            Product
+                        </th>
+                        <th class="MuiTableCell-root MuiTableCell-head MuiTableCell-alignCenter MuiTableCell-sizeMedium css-1i6khf7-MuiTableCell-root" scope="col">
+                            Quantity
+                        </th>
+                        <th class="MuiTableCell-root MuiTableCell-head MuiTableCell-alignRight MuiTableCell-sizeMedium css-1li21ik-MuiTableCell-root" scope="col">
+                            Price
+                        </th>
+                        <th class="MuiTableCell-root MuiTableCell-head MuiTableCell-alignRight MuiTableCell-sizeMedium css-1li21ik-MuiTableCell-root" scope="col">
+                            Total
+                        </th>
+                    </tr>
+                </thead>
+                <tbody class="MuiTableBody-root css-apqrd9-MuiTableBody-root">
+                    ${(invoice.items ?? []).map(
+                        (item) => `<tr class="MuiTableRow-root css-zjxnjz-MuiTableRow-root">
+                        <td class="MuiTableCell-root MuiTableCell-body MuiTableCell-sizeMedium css-wpnn0d-MuiTableCell-root">
+                            <p class="MuiTypography-root MuiTypography-body1 css-1y59pf2-MuiTypography-root">
+                                ${item?.sku_name}
+                            </p>
+                            <span class="MuiTypography-root MuiTypography-caption css-1cz0maw-MuiTypography-root">
+                            </span>
+                        </td>
+                        <td class="MuiTableCell-root MuiTableCell-body MuiTableCell-alignCenter MuiTableCell-sizeMedium css-447bl9-MuiTableCell-root">
+                            ${item?.quantity ?? 0}
+                        </td>
+                        <td class="MuiTableCell-root MuiTableCell-body MuiTableCell-alignRight MuiTableCell-sizeMedium css-1xjm43n-MuiTableCell-root">
+                            ${formatCurrency(item?.price ?? 0)}
+                        </td>
+                        <td class="MuiTableCell-root MuiTableCell-body MuiTableCell-alignRight MuiTableCell-sizeMedium css-1xjm43n-MuiTableCell-root">
+                            ${formatCurrency(item?.total ?? 0)}
+                        </td>
+                    </tr>`
+                    )}
+                </tbody>
+            </table>
+        </div>
+        <div class="MuiBox-root css-bn3a8e">
+            ${(invoice.items ?? []).map(
+                (item) => `<div class="MuiBox-root css-18goe8w">
+                <p class="MuiTypography-root MuiTypography-body1 css-1y59pf2-MuiTypography-root">
+                    Subtotal:
+                </p>
+                <p class="MuiTypography-root MuiTypography-body1 css-1y59pf2-MuiTypography-root">
+                    ${formatCurrency(item?.total ?? 0)}
+                </p>
+            </div>
+            <hr class="MuiDivider-root MuiDivider-fullWidth css-1r007c9-MuiDivider-root">`
+            )}
+            <div class="MuiBox-root css-18goe8w">
+                <h6 class="MuiTypography-root MuiTypography-h6 css-h8lkug-MuiTypography-root">
+                    Total:
+                </h6>
+                <h6 class="MuiTypography-root MuiTypography-h6 css-spillb-MuiTypography-root">
+                    ${formatCurrency(invoice?.total_amount ?? 0)}
+                </h6>
+            </div>
+        </div>
+        <div class="MuiBox-root css-h5fkc8">
+            <p class="MuiTypography-root MuiTypography-body2 MuiTypography-alignCenter css-1dy20js-MuiTypography-root">
+                Thank you for your business!
+            </p>
+        </div>
+    </body>
+</html>
+`);
+
+            printWindow.document.close();
+            printWindow.focus();
+
+            // Закрываем окно после завершения печати
+            printWindow.addEventListener('afterprint', function () {
+                printWindow.close();
+            });
+
+            printWindow.print();
+        }
         closeMenu();
     };
 

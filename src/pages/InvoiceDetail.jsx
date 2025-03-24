@@ -117,6 +117,7 @@ const InvoiceDetail = () => {
     const handlePrint = () => {
         if (invoiceRef.current) {
             const printContent = invoiceRef.current.innerHTML;
+            console.log('🚀 ~ handlePrint ~ printContent:', printContent);
             const printWindow = window.open('', '', 'width=800,height=600');
 
             printWindow.document.write(`
@@ -370,13 +371,13 @@ const InvoiceDetail = () => {
                             </Typography>
 
                             <Typography variant="body1" color="text.secondary">
-                                Date: {formatDate(invoice.date, 'datetime')}
+                                Date: {formatDate(invoice.created_at, 'datetime')}
                             </Typography>
                         </Box>
 
                         <Chip
-                            label={invoice.paymentStatus ? 'PAID' : 'UNPAID'}
-                            color={invoice.paymentStatus ? 'success' : 'error'}
+                            label={invoice.status !== 'pending' ? 'PAID' : 'UNPAID'}
+                            color={invoice.status !== 'pending' ? 'success' : 'error'}
                             size="medium"
                             sx={{
                                 fontSize: '1rem',
