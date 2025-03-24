@@ -5,7 +5,7 @@
 class ApiClient {
   constructor() {
     // Default API base URL (not used in local mode)
-    this.baseUrl = 'http://192.168.31.97:8000';
+    this.baseUrl = 'https://pos-api.makkenzo.com';
     this.authToken = null;
   }
 
