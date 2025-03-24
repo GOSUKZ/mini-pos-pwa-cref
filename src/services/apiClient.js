@@ -244,7 +244,7 @@ class ApiClient {
 
   async getLocalInvoices() {
     console.log("Getting local invoices");
-    const res = await this.apiRequest('/sales', {
+    const res = await this.apiRequest('/sales/', {
       method: 'GET'
     });
     return res;
