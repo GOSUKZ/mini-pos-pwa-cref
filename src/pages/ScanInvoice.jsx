@@ -409,7 +409,7 @@ const ScanInvoice = () => {
                             variant="outlined"
                             label="Enter Barcode"
                             value={barcodeInput}
-                            onChange={(e) => setBarcodeInput(e.target.value)}
+                            onChange={(e) => setBarcodeInput(e.target.value?.trim())}
                             onKeyPress={(e) => {
                                 if (e.key === 'Enter') {
                                     processBarcode(barcodeInput);
