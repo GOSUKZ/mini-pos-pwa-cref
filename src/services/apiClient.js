@@ -276,9 +276,9 @@ class ApiClient {
   }
 
   // * Analitic methods
-  async getSalesAnalytics() {
+  async getSalesAnalytics(startDate, endDate) {
     console.log("Getting sales analytics");
-    const res = await this.apiRequest('/analytics/sales', {
+    const res = await this.apiRequest(`/analytics/sales${startDate && endDate ? `?start_date=${startDate}&end_date=${endDate}` : ''}`, {
       method: 'GET'
     });
     return res;

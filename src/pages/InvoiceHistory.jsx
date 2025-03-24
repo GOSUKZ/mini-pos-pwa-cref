@@ -73,8 +73,8 @@ const InvoiceHistory = () => {
             setIsLoading(true);
 
             // Format dates for database query
-            const startDateFormatted = startDate.startOf('day').toISOString().split('.')[0] + 'Z';
-            const endDateFormatted = endDate.endOf('day').toISOString().split('.')[0] + 'Z';
+            const startDateFormatted = startDate.startOf('day').toISOString().split('.')[0];
+            const endDateFormatted = endDate.endOf('day').toISOString().split('.')[0];
 
             // Get invoices from database
             // const invoiceList = await getInvoicesByPeriod(startDateFormatted, endDateFormatted);
@@ -106,9 +106,9 @@ const InvoiceHistory = () => {
 
             filtered = filtered.filter((invoice) => {
                 if (isPaid) {
-                    return invoice.paymentStatus === 'paid';
+                    return invoice.status === 'paid';
                 } else {
-                    return invoice.paymentStatus !== 'unpaid';
+                    return invoice.status === 'unpaid';
                 }
             });
         }
@@ -567,9 +567,8 @@ const InvoiceHistory = () => {
                                                 sx={{
                                                     py: 2,
                                                     borderLeft: 4,
-                                                    borderLeftColor: invoice.paymentStatus
-                                                        ? 'success.main'
-                                                        : 'error.main',
+                                                    borderLeftColor:
+                                                        invoice.status === 'paid' ? 'success.main' : 'error.main',
                                                     '&:hover': {
                                                         bgcolor: 'action.hover',
                                                     },
@@ -591,9 +590,9 @@ const InvoiceHistory = () => {
                                                                 Invoice #{invoice.order_id}
                                                             </Typography>
                                                             <Chip
-                                                                label={invoice.paymentStatus ? 'Paid' : 'Unpaid'}
+                                                                label={invoice.status === 'paid' ? 'Paid' : 'Unpaid'}
                                                                 size="small"
-                                                                color={invoice.paymentStatus ? 'success' : 'error'}
+                                                                color={invoice.status === 'paid' ? 'success' : 'error'}
                                                                 sx={{ ml: 1 }}
                                                             />
                                                         </Box>

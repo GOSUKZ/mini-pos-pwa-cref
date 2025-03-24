@@ -95,8 +95,8 @@ const Analytics = () => {
             setIsLoading(true);
 
             // Format dates for database queries
-            const startDateFormatted = startDate.startOf('day').toISOString();
-            const endDateFormatted = endDate.endOf('day').toISOString();
+            const startDateFormatted = startDate.startOf('day').toISOString().split('.')[0];
+            const endDateFormatted = endDate.endOf('day').toISOString().split('.')[0];
 
             const res = await apiClient.getSalesAnalytics(startDateFormatted, endDateFormatted);
 

@@ -61,8 +61,11 @@ const Dashboard = () => {
                 oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
 
                 // Get sales data for today
-                // const salesData = await getSalesAnalytics(today.toISOString(), tomorrow.toISOString());
-                const res = await apiClient.getSalesAnalytics();
+                // const salesData = await getSalesAnalytics(oneWeekAgo.toISOString(), tomorrow.toISOString());
+                const res = await apiClient.getSalesAnalytics(
+                    oneWeekAgo.toISOString().split('.')[0],
+                    tomorrow.toISOString().split('.')[0]
+                );
                 const salesData = {
                     totalSales: res?.total_sales_count || 0,
                     invoiceCount: res?.sales_today || 0,
@@ -87,8 +90,8 @@ const Dashboard = () => {
 
                 // Get recent invoices
                 const invoices = await apiClient.getLocalInvoicesByPeriod(
-                    oneWeekAgo.toISOString(),
-                    tomorrow.toISOString()
+                    oneWeekAgo.toISOString().split('.')[0],
+                    tomorrow.toISOString().split('.')[0]
                 );
                 if (invoices && invoices?.length > 0) {
                     setRecentInvoices(invoices.slice(0, 5)); // Show only last 5 invoices
