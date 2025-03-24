@@ -369,28 +369,7 @@ const ScanInvoice = () => {
         }));
 
         try {
-            const invoiceId = await apiClient.createLocalInvoice(newInvoice);
-            console.log('🚀 ~ saveInvoice ~ invoiceId:', invoiceId);
-
-            // Add invoice items
-            // for (const item of invoiceItems) {
-            //     await addInvoiceItem({
-            //         invoiceId,
-            //         productId: item.productId,
-            //         quantity: item.quantity,
-            //         price: item.price,
-            //         total: item.total,
-            //     });
-
-            //     // Update product quantity
-            //     // const product = await findProductById(item.productId);
-            //     const product = await apiClient.byIdLocalProduct(item.productId);
-            //     if (product) {
-            //         const newQuantity = Math.max(0, product.quantity - item.quantity);
-            //         // await updateProductQuantity(item.productId, newQuantity);
-            //         await apiClient.updateLocalProduct(item.productId, { quantity: newQuantity });
-            //     }
-            // }
+            const invoiceId = await apiClient.createLocalInvoice(newInvoice, isPaid ? 'paid' : 'unpaid');
 
             // Clear invoice
             setInvoiceItems([]);

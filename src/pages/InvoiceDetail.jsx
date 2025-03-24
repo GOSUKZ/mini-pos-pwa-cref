@@ -94,7 +94,7 @@ const InvoiceDetail = () => {
                 }
 
                 setInvoice(invoiceData);
-                setIsPaid(invoiceData.paymentStatus);
+                setIsPaid(invoiceData?.status === 'paid');
 
                 // Get invoice items
                 // const items = await getInvoiceItems(invoiceData.id);
@@ -117,7 +117,6 @@ const InvoiceDetail = () => {
     const handlePrint = () => {
         if (invoiceRef.current) {
             const printContent = invoiceRef.current.innerHTML;
-            console.log('🚀 ~ handlePrint ~ printContent:', printContent);
             const printWindow = window.open('', '', 'width=800,height=600');
 
             printWindow.document.write(`
@@ -170,13 +169,7 @@ const InvoiceDetail = () => {
         try {
             setLoading(true);
 
-            // Update invoice in database
-            await updateInvoice(invoice.id, {
-                paymentStatus: isPaid,
-            });
-
-            // Update local state
-            setInvoice({ ...invoice, paymentStatus: isPaid });
+            await apiClient.uprateLocalInvoiceStatus(invoice.order_id, isPaid ? 'paid' : 'unpaid');
 
             showSnackbar(`Invoice marked as ${isPaid ? 'paid' : 'unpaid'}`, 'success');
             closePaidDialog();
@@ -197,7 +190,7 @@ const InvoiceDetail = () => {
                 try {
                     setLoading(true);
 
-                    await deleteInvoice(invoice.id);
+                    await apiClient.deleteLocalInvoice(invoice.order_id);
 
                     showSnackbar('Invoice deleted successfully', 'success');
                     navigate('/invoices');
@@ -267,10 +260,10 @@ const InvoiceDetail = () => {
                 }
             },
         },
-        { icon: <EditIcon />, name: 'Edit', action: () => navigate(`/invoice/${id}/edit`) },
+        // { icon: <EditIcon />, name: 'Edit', action: () => navigate(`/invoice/${id}/edit`) },
         { icon: <DeleteIcon />, name: 'Delete', action: handleDelete },
         {
-            icon: invoice?.paymentStatus ? <MoneyOffIcon /> : <MoneyIcon />,
+            icon: invoice?.status === 'paid' ? <MoneyOffIcon /> : <MoneyIcon />,
             name: 'Toggle Payment',
             action: openPaidDialog,
         },
@@ -376,8 +369,8 @@ const InvoiceDetail = () => {
                         </Box>
 
                         <Chip
-                            label={invoice.status !== 'pending' ? 'PAID' : 'UNPAID'}
-                            color={invoice.status !== 'pending' ? 'success' : 'error'}
+                            label={invoice.status !== 'unpaid' ? 'PAID' : 'UNPAID'}
+                            color={invoice.status !== 'unpaid' ? 'success' : 'error'}
                             size="medium"
                             sx={{
                                 fontSize: '1rem',

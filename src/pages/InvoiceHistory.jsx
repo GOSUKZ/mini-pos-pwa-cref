@@ -106,9 +106,9 @@ const InvoiceHistory = () => {
 
             filtered = filtered.filter((invoice) => {
                 if (isPaid) {
-                    return invoice.paymentStatus === 'pending';
+                    return invoice.paymentStatus === 'paid';
                 } else {
-                    return invoice.paymentStatus !== 'pending';
+                    return invoice.paymentStatus !== 'unpaid';
                 }
             });
         }
@@ -647,12 +647,12 @@ const InvoiceHistory = () => {
                         <ListItemText>View</ListItemText>
                     </MenuItem>
 
-                    <MenuItem onClick={() => selectedInvoice && editInvoice(selectedInvoice)}>
+                    {/* <MenuItem onClick={() => selectedInvoice && editInvoice(selectedInvoice)}>
                         <ListItemIcon>
                             <EditIcon fontSize="small" />
                         </ListItemIcon>
                         <ListItemText>Edit</ListItemText>
-                    </MenuItem>
+                    </MenuItem> */}
 
                     <MenuItem onClick={() => selectedInvoice && printInvoice(selectedInvoice)}>
                         <ListItemIcon>

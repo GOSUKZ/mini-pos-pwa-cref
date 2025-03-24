@@ -5,7 +5,7 @@
 class ApiClient {
   constructor() {
     // Default API base URL (not used in local mode)
-    this.baseUrl = 'https://pos-api.makkenzo.com';
+    this.baseUrl = 'http://192.168.31.97:8000';
     this.authToken = null;
   }
 
@@ -216,13 +216,28 @@ class ApiClient {
   }
   // *
 
-  async createLocalInvoice(invoiceList = []) {
-    console.log("🚀 ~ ApiClient ~ createLocalInvoice ~ invoiceList:", invoiceList)
+  async createLocalInvoice(invoiceList = [], sale_status) {
     console.log("Creating invoice");
     if (invoiceList.length === 0) return null;
-    const res = await this.apiRequest('/sales/create', {
+    const res = await this.apiRequest(`/sales/create${sale_status ? `?sale_status=${sale_status}` : ''}`, {
       method: 'POST',
       body: JSON.stringify(invoiceList)
+    });
+    return res?.order_id;
+  }
+
+  async uprateLocalInvoiceStatus(order_id, sale_status) {
+    console.log("Updating local invoice status:", order_id);
+    const res = await this.apiRequest(`/sales/${order_id}/status?sale_status=${sale_status}`, {
+      method: 'PATCH'
+    });
+    return res?.order_id;
+  }
+
+  async deleteLocalInvoice(order_id) {
+    console.log("Deleting local invoice:", order_id);
+    const res = await this.apiRequest(`/sales/cancel?order_id=${order_id}`, {
+      method: 'DELETE'
     });
     return res?.order_id;
   }
