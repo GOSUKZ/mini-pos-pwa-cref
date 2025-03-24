@@ -274,6 +274,15 @@ class ApiClient {
     });
     return !!res;
   }
+
+  // * Analitic methods
+  async getSalesAnalytics() {
+    console.log("Getting sales analytics");
+    const res = await this.apiRequest('/analytics/sales', {
+      method: 'GET'
+    });
+    return res;
+  }
 }
 
 // Create a singleton instance
