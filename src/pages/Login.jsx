@@ -156,7 +156,7 @@ const Login = () => {
                                 autoComplete="username"
                                 autoFocus
                                 value={username}
-                                onChange={(e) => setUsername(e.target.value)}
+                                onChange={(e) => setUsername(e.target.value?.trim())}
                                 InputProps={{
                                     startAdornment: (
                                         <InputAdornment position="start">
@@ -177,7 +177,7 @@ const Login = () => {
                                 id="password"
                                 autoComplete="current-password"
                                 value={password}
-                                onChange={(e) => setPassword(e.target.value)}
+                                onChange={(e) => setPassword(e.target.value?.trim())}
                                 InputProps={{
                                     startAdornment: (
                                         <InputAdornment position="start">
