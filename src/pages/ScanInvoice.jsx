@@ -296,7 +296,9 @@ const ScanInvoice = () => {
         if (isCameraOpen && webcamRef.current && selectedCamera) {
             // Start scanning with a short delay to ensure camera is initialized
             const timer = setTimeout(() => {
-                barcodeService.startScanning(webcamRef.current.video, handleBarcodeScan, selectedCamera);
+                try {
+                    barcodeService.startScanning(webcamRef.current.video, handleBarcodeScan, selectedCamera);
+                } catch (error) {}
             }, 1200);
 
             return () => clearTimeout(timer);
@@ -451,9 +453,15 @@ const ScanInvoice = () => {
                                 audio={false}
                                 autoPlay={!!isCameraOpen}
                                 videoConstraints={{
-                                    facingMode: 'environment',
-                                    width: { ideal: 1280 },
-                                    height: { ideal: 720 },
+                                    facingMode: { exact: 'environment' }, // Prefer back camera
+                                    width: { min: 720, ideal: 1280, max: 1920 },
+                                    height: { min: 480, ideal: 720, max: 1080 },
+                                    aspectRatio: { ideal: 4 / 3 },
+                                    focusMode: 'continuous', // Keep focus continuous
+                                    iso: { max: 4000, min: 20, step: 1 },
+                                    torch: false,
+                                    // Higher frame rate for better scanning chances
+                                    frameRate: { min: 15, ideal: 30 },
                                 }}
                                 style={{
                                     width: '100%',

@@ -76,7 +76,9 @@ const ProductCreate = () => {
 
             // Start scanning with a delay to ensure camera is initialized
             const timer = setTimeout(() => {
-                barcodeService.startScanning(webcamRef.current.video, handleBarcodeScan);
+                try {
+                    barcodeService.startScanning(webcamRef.current.video, handleBarcodeScan);
+                } catch (error) {}
             }, 1000);
 
             return () => {
@@ -194,9 +196,15 @@ const ProductCreate = () => {
                                             ref={webcamRef}
                                             audio={false}
                                             videoConstraints={{
-                                                facingMode: 'environment',
-                                                width: { ideal: 1280 },
-                                                height: { ideal: 720 },
+                                                facingMode: { exact: 'environment' }, // Prefer back camera
+                                                width: { min: 720, ideal: 1280, max: 1920 },
+                                                height: { min: 480, ideal: 720, max: 1080 },
+                                                aspectRatio: { ideal: 4 / 3 },
+                                                focusMode: 'continuous', // Keep focus continuous
+                                                iso: { max: 4000, min: 20, step: 1 },
+                                                torch: false,
+                                                // Higher frame rate for better scanning chances
+                                                frameRate: { min: 15, ideal: 30 },
                                             }}
                                             screenshotFormat="image/jpeg"
                                             style={{

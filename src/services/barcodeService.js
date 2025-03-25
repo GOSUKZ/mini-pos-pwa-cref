@@ -11,6 +11,8 @@ class BarcodeService {
     this.lastResult = null;
     this.scanCallback = null;
     this.processingFrame = false;
+
+    this.countRestarts = 0;
   }
 
   /**
@@ -99,11 +101,13 @@ class BarcodeService {
       // Define camera constraints optimized for barcode scanning
       const constraints = {
         video: {
-          facingMode: 'environment', // Prefer back camera
+          facingMode: { exact: 'environment' }, // Prefer back camera
           width: { min: 720, ideal: 1280, max: 1920 },
           height: { min: 480, ideal: 720, max: 1080 },
           aspectRatio: { ideal: 4 / 3 },
           focusMode: 'continuous', // Keep focus continuous
+          iso: { max: 4000, min: 20, step: 1 },
+          torch: false,
           // Higher frame rate for better scanning chances
           frameRate: { min: 15, ideal: 30 }
         },
@@ -228,10 +232,28 @@ class BarcodeService {
     // Initialize last result
     this.lastResult = null;
 
+    const restartCamera = async () => {
+      self.countRestarts++;
+      try {
+        if (self.countRestarts < 3) {
+          await this.startCamera(videoElement, deviceId);
+        }
+      } catch (error) {
+        setTimeout(() => {
+          restartCamera()
+        }, self.countRestarts * 1000);
+      }
+    }
+
     try {
       // Start camera
       await this.startCamera(videoElement, deviceId);
+    } catch (error) {
+      console.error('Error starting camera:', error);
+      await restartCamera();
+    }
 
+    try {
       // Create barcode reader if necessary
       if (!this.scanner && window.ZXing) {
         const hints = new Map();
