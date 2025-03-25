@@ -136,9 +136,9 @@ class BarcodeService {
           const settings = {};
 
           // Enable torch if available (helps with low light scanning)
-          if (capabilities.torch) {
-            settings.torch = true;
-          }
+          // if (capabilities.torch) {
+          //   settings.torch = true;
+          // }
 
           // Set focus mode to continuous if available
           if (capabilities.focusMode && capabilities.focusMode.includes('continuous')) {
