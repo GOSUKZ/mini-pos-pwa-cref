@@ -317,6 +317,10 @@ const InvoiceHistory = () => {
             printWindow.focus();
 
             // Закрываем окно после завершения печати
+            printWindow.addEventListener('cancel', function () {
+                printWindow.close();
+            });
+            // Закрываем окно после завершения печати
             printWindow.addEventListener('afterprint', function () {
                 printWindow.close();
             });

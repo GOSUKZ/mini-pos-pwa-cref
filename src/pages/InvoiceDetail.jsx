@@ -147,6 +147,10 @@ const InvoiceDetail = () => {
             printWindow.focus();
 
             // Закрываем окно после завершения печати
+            printWindow.addEventListener('cancel', function () {
+                printWindow.close();
+            });
+            // Закрываем окно после завершения печати
             printWindow.addEventListener('afterprint', function () {
                 printWindow.close();
             });
@@ -217,44 +221,35 @@ const InvoiceDetail = () => {
             name: 'Download PDF',
             action: () => {
                 if (invoiceRef.current) {
-                    // Рендерим содержимое в canvas с увеличенным масштабом для лучшего качества
-                    html2canvas(invoiceRef.current, { scale: 2 }).then((canvas) => {
+                    // Используем html2canvas для создания canvas из содержимого элемента
+                    html2canvas(invoiceRef.current).then((canvas) => {
+                        // Преобразуем canvas в изображение в формате PNG
                         const imgData = canvas.toDataURL('image/png');
-                        const pdf = new jsPDF({
-                            orientation: 'landscape',
-                            unit: 'mm',
-                            format: 'a4',
-                        });
 
-                        // Получаем размеры PDF-страницы в мм
-                        const pageWidth = pdf.internal.pageSize.getWidth();
-                        const pageHeight = pdf.internal.pageSize.getHeight();
+                        // Создаём новый PDF-документ формата A4
+                        const pdf = new jsPDF('p', 'mm', 'a4');
 
-                        // Получаем размеры изображения
+                        // Определяем размеры страницы PDF
+                        const pdfWidth = pdf.internal.pageSize.getWidth();
+                        const pdfHeight = pdf.internal.pageSize.getHeight();
+
+                        // Получаем исходные размеры canvas
                         const imgWidth = canvas.width;
                         const imgHeight = canvas.height;
 
-                        // Рассчитываем масштаб, чтобы вписать ширину изображения в ширину PDF
-                        const ratio = pageWidth / imgWidth;
-                        const pdfImgWidth = pageWidth;
-                        const pdfImgHeight = imgHeight * ratio;
+                        // Вычисляем пропорциональные размеры изображения для встраивания в PDF
+                        const ratio = Math.min(pdfWidth / imgWidth, pdfHeight / imgHeight);
+                        const imgScaledWidth = imgWidth * ratio;
+                        const imgScaledHeight = imgHeight * ratio;
 
-                        // Если высота изображения меньше высоты страницы, просто добавляем изображение
-                        if (pdfImgHeight <= pageHeight) {
-                            pdf.addImage(imgData, 'PNG', 0, 0, pdfImgWidth, pdfImgHeight);
-                        } else {
-                            // Если изображение слишком высокое, разбиваем его на несколько страниц
-                            let position = 0;
-                            let remainingHeight = pdfImgHeight;
-                            while (remainingHeight > 0) {
-                                pdf.addImage(imgData, 'PNG', 0, -position, pdfImgWidth, pdfImgHeight);
-                                remainingHeight -= pageHeight;
-                                position += pageHeight;
-                                if (remainingHeight > 0) {
-                                    pdf.addPage();
-                                }
-                            }
-                        }
+                        // Центрирование изображения на странице
+                        const x = (pdfWidth - imgScaledWidth) / 2;
+                        const y = (pdfHeight - imgScaledHeight) / 2;
+
+                        // Добавляем изображение в PDF
+                        pdf.addImage(imgData, 'PNG', x, y, imgScaledWidth, imgScaledHeight);
+
+                        // Сохраняем PDF-файл с именем, содержащим номер счета
                         pdf.save(`Invoice_${invoice.order_id}.pdf`);
                     });
                 }
