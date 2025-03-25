@@ -31,7 +31,6 @@ const AppDialog = () => {
             open={open}
             onClose={handleClose}
             maxWidth={maxWidth}
-            fullScreen={fullScreen}
             aria-labelledby="dialog-title"
             PaperProps={{
                 elevation: 4,
@@ -75,7 +74,7 @@ const AppDialog = () => {
                 ))}
 
                 {actions.length === 0 && (
-                    <Button onClick={handleClose} color="primary" fullWidth={!!fullScreen}>
+                    <Button onClick={handleClose} color="primary">
                         Close
                     </Button>
                 )}
