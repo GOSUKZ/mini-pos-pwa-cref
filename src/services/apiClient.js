@@ -5,7 +5,7 @@
 class ApiClient {
   constructor() {
     // Default API base URL (not used in local mode)
-    this.baseUrl = 'https://pos-api.makkenzo.com';
+    this.baseUrl = 'http://pos-api.metalogic.kz';
     this.authToken = null;
   }
 
